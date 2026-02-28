@@ -37,6 +37,23 @@ interface TaxCalculation {
   averageTaxRate: number;
 }
 
+function calculateTaxForIncome(
+  income: number,
+  deductions: number,
+  zakatAmount: number
+): number {
+  const taxableIncome = Math.max(0, income - deductions);
+  let tax = 0;
+
+  for (const bracket of TAX_BRACKETS) {
+    if (taxableIncome <= bracket.min) break;
+    const incInBracket = Math.min(taxableIncome, bracket.max) - bracket.min;
+    tax += incInBracket * bracket.rate;
+  }
+
+  return Math.max(0, tax - zakatAmount - 400);
+}
+
 export default function Home() {
   // Income
   const [grossIncome, setGrossIncome] = useState(40000);
@@ -68,6 +85,9 @@ export default function Home() {
 
   // UI State
   const [showTaxRate, setShowTaxRate] = useState(false);
+  const [showReverseCalculator, setShowReverseCalculator] = useState(false);
+  const [desiredTaxAmount, setDesiredTaxAmount] = useState(0);
+  const [calculatedGrossIncome, setCalculatedGrossIncome] = useState(0);
 
   // Calculate tax
   const calculation = useMemo(() => {
@@ -154,6 +174,58 @@ export default function Home() {
     parentMedical, prs, medicalInsurance, eduSelf, supportEquip, medical,
     epf, lifeInsurance, lifestyle, sportEquip, socso, ev, pcb, zakat
   ]);
+
+  // Calculate total deductions for reverse calculator
+  const getTotalDeductions = () => {
+    let indSpouseRelief = 9000;
+    if (maritalStatus === "married" && !spouseWorking) {
+      indSpouseRelief += 4000;
+    }
+    if (spouseDisabled) {
+      indSpouseRelief += 3500;
+    }
+
+    let otherRel = 0;
+    otherRel += Math.min(parentMedical, 8000);
+    otherRel += Math.min(prs, 3000);
+    otherRel += Math.min(medicalInsurance, 4000);
+    otherRel += Math.min(eduSelf, 7000);
+    otherRel += Math.min(supportEquip, 6000);
+    otherRel += Math.min(medical, 10000);
+    otherRel += Math.min(epf, 4000);
+    otherRel += Math.min(lifeInsurance, 3000);
+    otherRel += Math.min(lifestyle, 2500);
+    otherRel += Math.min(sportEquip, 1000);
+    otherRel += Math.min(socso, 350);
+    otherRel += Math.min(ev, 2500);
+    otherRel += Math.min(pcb, 2500);
+
+    return indSpouseRelief + otherRel + zakat;
+  };
+
+  const handleReverseCalculate = () => {
+    const totalDed = getTotalDeductions();
+    
+    // Binary search to find income that results in desired tax
+    let low = 0;
+    let high = 10000000;
+    let result = 0;
+
+    for (let i = 0; i < 100; i++) {
+      const mid = (low + high) / 2;
+      const calculatedTax = calculateTaxForIncome(mid, totalDed, zakat);
+      
+      if (calculatedTax < desiredTaxAmount) {
+        low = mid;
+      } else {
+        high = mid;
+      }
+      result = mid;
+    }
+    
+    setCalculatedGrossIncome(Math.round(result));
+    setShowReverseCalculator(true);
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -654,11 +726,48 @@ export default function Home() {
               Calculate Tax
             </Button>
 
+            {/* Reverse Tax Calculator Section */}
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+              <div className="flex items-start gap-3 mb-6">
+                <div className="bg-yellow-100 rounded-full p-2 flex-shrink-0">
+                  <HelpCircle className="w-5 h-5 text-yellow-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800">How if I wish to pay a lower tax amount?</h3>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">Tax amount I wish to pay is RM</Label>
+                  <Input
+                    type="number"
+                    value={desiredTaxAmount}
+                    onChange={(e) => setDesiredTaxAmount(Number(e.target.value))}
+                    placeholder="Enter desired tax amount"
+                    className="w-full"
+                  />
+                </div>
+
+                <Button
+                  onClick={handleReverseCalculate}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-3 font-semibold rounded"
+                >
+                  Calculate Gross Income
+                </Button>
+
+                {showReverseCalculator && calculatedGrossIncome > 0 && (
+                  <div className="bg-white border border-gray-300 rounded p-4 mt-4">
+                    <p className="text-sm text-gray-600 mb-2">To pay a tax of <span className="font-semibold">RM {desiredTaxAmount.toLocaleString()}</span>, your gross income should be:</p>
+                    <p className="text-2xl font-bold text-primary">RM {calculatedGrossIncome.toLocaleString()}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Tax Rate Section */}
             <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
               <button
                 onClick={() => setShowTaxRate(!showTaxRate)}
-                className="w-full bg-gray-100 hover:bg-gray-200 px-6 py-4 font-semibold flex justify-between items-center text-left"
+                className="w-full bg-gray-100 hover:bg-gray-200 px-6 py-4 font-semibold flex justify-between items-center text-left rounded-t-lg"
               >
                 <span>Tax Rate</span>
                 {showTaxRate ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
