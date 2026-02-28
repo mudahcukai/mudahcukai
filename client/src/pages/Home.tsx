@@ -251,8 +251,8 @@ export default function Home() {
       <header className="bg-primary text-primary-foreground py-6 px-4">
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-4">
-            <h1 className="text-3xl font-bold mb-2">SQL Professional Tax Calculator & Tax Planner Malaysia</h1>
-            <p className="text-lg opacity-90">for Income Tax 2026</p>
+            <h1 className="text-3xl font-bold mb-2">MudahCukai - Malaysia Income Tax Calculator</h1>
+            <p className="text-lg opacity-90">Professional Tax Computation & Planning Tool</p>
           </div>
           <div className="flex justify-center items-center gap-4">
             <span className="text-xl font-semibold">YA 2025</span>
