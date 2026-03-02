@@ -1,4 +1,3 @@
-# 👋 mudahcukai - Development & Project Leadership
 
 **Director's Dashboard for @securemy-labs Project Development Monitoring**
 
